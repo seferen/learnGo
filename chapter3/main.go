@@ -163,7 +163,7 @@ func squares(c chan int) {
 	close(c)
 }
 
-func main() {
+func task3() {
 	fmt.Println("main() started")
 
 	c := make(chan int, 10)
@@ -176,5 +176,43 @@ func main() {
 	}
 
 	fmt.Println("main() stoped")
+}
+
+// Напишите элемент конвейера (функцию), что запоминает предыдущее значение и отправляет
+// значения на следующий этап конвейера только если оно отличается от того, что пришло ранее.
+// Ваша фукнция должна принимать два канала - inputStream и outputStream, в первый вы будете
+// получать строки, во второй вы должны отправлять значения без повторов. В итоге в outputStream
+// должны остаться значения, которые не повторяются подряд. Не забудьте закрыть канал
+func removeDuplicates(input chan string, output chan string) {
+	defer close(output)
+	m := make(map[string]bool)
+	for v := range input {
+		if _, exist := m[v]; exist != true {
+			output <- v
+			m[v] = true
+
+		}
+	}
+}
+
+func main() {
+	list := [...]string{"test", "relax", "test", "ping", "pong"}
+	input := make(chan string)
+	output := make(chan string)
+	go func(input chan string) {
+		defer close(input)
+
+		for _, v := range list {
+
+			input <- v
+		}
+
+	}(input)
+
+	go removeDuplicates(input, output)
+
+	for r := range output {
+		fmt.Println(">>>", r)
+	}
 
 }
