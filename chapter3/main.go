@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -195,24 +196,96 @@ func removeDuplicates(input chan string, output chan string) {
 	}
 }
 
-func main() {
-	list := [...]string{"test", "relax", "test", "ping", "pong"}
-	input := make(chan string)
-	output := make(chan string)
-	go func(input chan string) {
-		defer close(input)
+//Внутри функции main (функцию объявлять не нужно), вам необходимо в отдельной горутине вызвать функцию work() и дождаться результатов ее выполнения.
 
-		for _, v := range list {
+func work() {
 
-			input <- v
-		}
+}
 
-	}(input)
+func task4() {
+	done := make(chan struct{})
+	go func() {
+		work()
+		close(done)
+	}()
+	<-done
+}
 
-	go removeDuplicates(input, output)
+func task5() {
+	done := new(sync.WaitGroup)
+	for i := 0; i < 10; i++ {
+		go func(done *sync.WaitGroup) {
+			defer done.Done()
+			done.Add(1)
+			work()
 
-	for r := range output {
-		fmt.Println(">>>", r)
+		}(done)
 	}
 
+	done.Wait()
+}
+
+// Внутри функции main (функцию объявлять не нужно), вам необходимо в отдельных горутинах вызвать функцию work() 10 раз и дождаться результатов выполнения вызванных функций.
+func task6() {
+	done := new(sync.WaitGroup)
+	for i := 0; i < 10; i++ {
+		done.Add(1)
+		go func(done *sync.WaitGroup) {
+			defer done.Done()
+
+			work()
+
+		}(done)
+	}
+
+	done.Wait()
+}
+
+// Вам необходимо написать функцию calculator следующего вида:
+
+// func calculator(firstChan <-chan int, secondChan <-chan int, stopChan <-chan struct{}) <-chan int
+// Функция получает в качестве аргументов 3 канала, и возвращает канал типа <-chan int.
+
+// в случае, если аргумент будет получен из канала firstChan, в выходной (возвращенный) канал вы должны отправить квадрат аргумента.
+// в случае, если аргумент будет получен из канала secondChan, в выходной (возвращенный) канал вы должны отправить результат умножения аргумента на 3.
+// в случае, если аргумент будет получен из канала stopChan, нужно просто завершить работу функции.
+// Функция calculator должна быть неблокирующей, сразу возвращая управление. Ваша функция получит всего одно значение в один из каналов - получили значение, обработали его, завершили работу.
+
+// После завершения работы необходимо освободить ресурсы, закрыв выходной канал, если вы этого не сделаете, то превысите предельное время работы.
+func calculator(firstChan <-chan int, secondChan <-chan int, stopChan <-chan struct{}) <-chan int {
+	result := make(chan int)
+	defer close(result)
+
+	go func() {
+		select {
+		case s := <-firstChan:
+			result <- s * s
+		case m := <-secondChan:
+			result <- m * 3
+		case <-stopChan:
+		}
+
+	}()
+	return result
+
+}
+
+func main() {
+	fmt.Println("Start application")
+	time.Sleep(time.Second * 2)
+	fmt.Println("write after sleep")
+	timer := time.After(time.Second)
+	<-timer
+	fmt.Println("time after tic")
+	ticker := time.Tick(time.Second * 3)
+	count := 0
+
+	for {
+		<-ticker
+		fmt.Println("очередной тик")
+		count++
+		if count == 3 {
+			break
+		}
+	}
 }
